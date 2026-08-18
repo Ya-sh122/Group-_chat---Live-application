@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Group Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-color: #F3F4F6;
+            --surface: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --my-msg: #E0E7FF;
+            --other-msg: #F3F4F6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .hidden { display: none !important; }
+        button { cursor: pointer; transition: 0.2s; border: none; font-weight: 500; }
+        input { font-size: 14px; }
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        /* Auth Section */
+        #auth-section { display: flex; height: 100vh; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .auth-card { background: var(--surface); padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .auth-card h2 { margin-bottom: 25px; color: var(--text-main); font-weight: 600; }
+        .form-group { margin-bottom: 15px; }
+        .form-group input { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; background: #F9FAFB; }
+        .auth-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border-radius: 8px; font-size: 16px; margin-top: 10px; }
+        .auth-btn:hover { background: var(--primary-hover); }
+        .auth-links { margin-top: 15px; font-size: 14px; color: var(--text-muted); }
+        .auth-links a { color: var(--primary); text-decoration: none; font-weight: 500; }
+
+        /* Main App Layout */
+        #app-section { display: flex; height: 100vh; width: 100vw; background: var(--bg-color); }
+        
+        /* Sidebar */
+        .sidebar { width: 320px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; justify-content: space-between; align-items: center;}
+        .sidebar-header h3 { font-size: 18px; font-weight: 600; }
+        .logout-btn { padding: 6px 12px; background: #FEE2E2; color: #DC2626; border-radius: 6px; font-size: 12px; }
+        .logout-btn:hover { background: #FECACA; }
+        
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
+        .section-title { font-size: 12px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 10px; margin-top: 20px; }
+        
+        #group-list { list-style: none; }
+        #group-list li { padding: 12px 15px; background: #F9FAFB; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;}
+        #group-list li:hover { border-color: var(--primary); background: #EEF2FF; }
+        .admin-badge { font-size: 10px; background: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 10px; font-weight: 600;}
+
+        .action-box { background: #F9FAFB; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border); }
+        .action-box input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; }
+        .action-box button { width: 100%; padding: 8px; background: var(--primary); color: white; border-radius: 6px; }
+
+        /* Chat Area */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: var(--surface); }
+        .chat-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .chat-header h3 { font-size: 18px; color: var(--text-main); }
+        .online-status { font-size: 14px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        .online-dot-header { width: 10px; height: 10px; background: #10B981; border-radius: 50%; }
+
+        .chat-box { flex: 1; overflow-y: auto; padding: 20px; background: #F8FAFC; display: flex; flex-direction: column; gap: 12px; }
+        
+        .message-row { display: flex; flex-direction: column; max-width: 70%; }
+        .message-row.mine { align-self: flex-end; align-items: flex-end; }
+        .message-row.others { align-self: flex-start; align-items: flex-start; }
+        
+        .sender-name { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; display: flex; align-items: center; gap: 5px;}
+        
+        .message-bubble { padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05); word-wrap: break-word;}
+        .mine .message-bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+        .others .message-bubble { background: white; color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+        
+        img.chat-img { max-width: 250px; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 2px solid white;}
+
+        /* Input Area */
+        .input-area { padding: 20px; background: var(--surface); border-top: 1px solid var(--border); }
+        
+        .ai-suggestions { display: flex; gap: 10px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px;}
+        .ai-btn { background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 5px;}
+        .ai-btn:hover { opacity: 0.9; }
+
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        .input-group input[type="text"] { flex: 1; padding: 14px; border: 1px solid var(--border); border-radius: 24px; background: #F9FAFB; }
+        .send-btn { background: var(--primary); color: white; padding: 12px 24px; border-radius: 24px; font-weight: 600; }
+        .send-btn:hover { background: var(--primary-hover); }
+        
+        /* Custom File Upload Button */
+        .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
+        .file-upload-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+        .file-btn { background: #E5E7EB; color: var(--text-main); padding: 12px; border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; }
+        .file-btn:hover { background: #D1D5DB; }
+
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; }
+        .status-online { background-color: #10B981; }
+        .status-offline { background-color: #EF4444; }
+
+    </style>
+</head>
+<body>
+
+<!-- AUTH SECTION -->
+<div id="auth-section">
+    <div class="auth-card" id="login-box">
+        <h2>Welcome Back</h2>
+        <div class="form-group"><input type="email" id="login-email" placeholder="Email address" value="test@test.com"></div>
+        <div class="form-group"><input type="password" id="login-password" placeholder="Password" value="password123"></div>
+        <button class="auth-btn" onclick="login()">Login</button>
+        <p class="auth-links">New here? <a href="#" onclick="toggleAuth('signup')">Create an account</a></p>
+    </div>
+
+    <div class="auth-card hidden" id="signup-box">
+        <h2>Create Account</h2>
+        <div class="form-group"><input type="text" id="signup-name" placeholder="Full Name"></div>
+        <div class="form-group"><input type="email" id="signup-email" placeholder="Email address"></div>
+        <div class="form-group"><input type="text" id="signup-phone" placeholder="Phone Number"></div>
+        <div class="form-group"><input type="password" id="signup-password" placeholder="Password"></div>
+        <button class="auth-btn" onclick="signup()">Sign Up</button>
+        <p class="auth-links">Already have an account? <a href="#" onclick="toggleAuth('login')">Login instead</a></p>
+    </div>
+</div>
+
+<!-- MAIN APP SECTION -->
+<div id="app-section" class="hidden">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3 id="welcome-msg">ChatApp</h3>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        
+        <div class="sidebar-content">
+            <div class="section-title">My Groups</div>
+            <ul id="group-list"></ul>
+            
+            <div class="section-title">Actions</div>
+            <div class="action-box">
+                <input type="text" id="new-group-name" placeholder="New group name...">
+                <button onclick="createGroup()">Create Group</button>
+            </div>
+
+            <div class="action-box">
+                <input type="email" id="add-user-email" placeholder="User email...">
+                <button onclick="addUserToGroup()">Add to Current Group</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+        <div class="chat-header">
+            <h3 id="current-group-name">Select a group to start</h3>
+            <div class="online-status">
+                <div class="online-dot-header"></div>
+                <span id="online-count">0</span> Online
+            </div>
+        </div>
+        
+        <div class="chat-box" id="chat-box">
+            <!-- Messages go here -->
+            <div style="text-align:center; color:#9CA3AF; margin-top: 50px;">
+                Create or select a group from the sidebar to start messaging.
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <div class="ai-suggestions" id="ai-suggestions-box"></div>
+            
+            <div class="input-group">
+                <div class="file-upload-wrapper">
+                    <button class="file-btn">📎</button>
+                    <input type="file" id="media-input" accept="image/*" onchange="sendMedia()">
+                </div>
+                
+                <input type="text" id="message-input" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+                
+                <button class="ai-btn" onclick="getAiSuggestions()">✨ AI</button>
+                <button class="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const API_URL = 'http://localhost:8000';
+    let token = localStorage.getItem('token');
+    let currentUserId = localStorage.getItem('userId');
+    let currentUserName = localStorage.getItem('userName');
+    let currentGroupId = null;
+    let socket;
+    let currentlyOnlineUsers = [];
+
+    if (token) {
+        showApp();
+    }
+
+    function toggleAuth(type) {
+        if (type === 'signup') {
+            document.getElementById('login-box').classList.add('hidden');
+            document.getElementById('signup-box').classList.remove('hidden');
+        } else {
+            document.getElementById('signup-box').classList.add('hidden');
+            document.getElementById('login-box').classList.remove('hidden');
+        }
+    }
+
+    function logout() {
+        localStorage.clear();
+        location.reload();
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    }
+
+    async function login() {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        try {
+            const res = await fetch(`${API_URL}/user/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                token = data.token;
+                currentUserId = data.userId;
+                currentUserName = data.userName;
+                localStorage.setItem('token', token);
+                localStorage.setItem('userId', currentUserId);
+                localStorage.setItem('userName', currentUserName);
+                showApp();
+            } else {
+                alert(data.message);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function signup() {
+        const name = document.getElementById('signup-name').value;
+        const email = document.getElementById('signup-email').value;
+        const phone = document.getElementById('signup-phone').value;
+        const password = document.getElementById('signup-password').value;
+
+        try {
+            const res = await fetch(`${API_URL}/user/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone, password })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("Signup successful! Please login.");
+                toggleAuth('login');
+                document.getElementById('login-email').value = email;
+            } else {
+                alert(data.message);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function showApp() {
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('app-section').classList.remove('hidden');
+        document.getElementById('welcome-msg').innerText = currentUserName;
+        
+        socket = io(API_URL);
+        socket.emit('user-online', currentUserId);
+
+        socket.on('update-online-status', (onlineUserIds) => {
+            // Convert to strings and remove duplicates using Set, then get the length
+            currentlyOnlineUsers = Array.from(new Set(onlineUserIds.map(id => String(id))));
+            document.getElementById('online-count').innerText = currentlyOnlineUsers.length;
+        });
+
+        socket.on('receive-message', (data) => {
+            if (String(data.groupId) === String(currentGroupId)) {
+                appendMessageToUI(data);
+            }
+        });
+
+        fetchGroups();
+    }
+
+    async function fetchGroups() {
+        try {
+            const res = await fetch(`${API_URL}/group/my-groups`, { headers: { 'Authorization': token } });
+            
+            if (res.status === 401) return logout(); // Auto logout if token invalid
+            
+            const data = await res.json();
+            
+            const list = document.getElementById('group-list');
+            list.innerHTML = '';
+            
+            // Fix: Check if data.groups actually exists and is an array before looping
+            if (data.groups && Array.isArray(data.groups)) {
+                data.groups.forEach(group => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span># ${group.name}</span> ${group.isAdmin ? '<span class="admin-badge">Admin</span>' : ''}`;
+                    li.onclick = () => joinGroup(group.id, group.name);
+                    list.appendChild(li);
+                });
+            } else {
+                console.warn("No groups found or invalid response format", data);
+            }
+        } catch (err) {
+            console.error("Error fetching groups:", err);
+        }
+    }
+
+    async function createGroup() {
+        const name = document.getElementById('new-group-name').value;
+        if (!name) return;
+        try {
+            await fetch(`${API_URL}/group/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ name })
+            });
+            document.getElementById('new-group-name').value = '';
+            fetchGroups();
+        } catch (err) { console.error(err); }
+    }
+
+    function joinGroup(groupId, groupName) {
+        currentGroupId = groupId;
+        document.getElementById('current-group-name').innerText = groupName;
+        socket.emit('join-room', groupId);
+        fetchMessages(groupId);
+    }
+
+    async function fetchMessages(groupId) {
+        try {
+            const res = await fetch(`${API_URL}/message/group/${groupId}`, { headers: { 'Authorization': token } });
+            const data = await res.json();
+            
+            document.getElementById('chat-box').innerHTML = '';
+            data.messages.forEach(msg => {
+                appendMessageToUI({
+                    userId: msg.userId,
+                    userName: msg.user.name,
+                    text: msg.text,
+                    mediaUrl: msg.mediaUrl
+                });
+            });
+        } catch (err) { console.error(err); }
+    }
+
+    async function sendMessage() {
+        if (!currentGroupId) return alert("Select a group first");
+        const text = document.getElementById('message-input').value;
+        if (!text.trim()) return;
+
+        try {
+            const res = await fetch(`${API_URL}/message/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ text, groupId: currentGroupId })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                socket.emit('send-message', data.data);
+                document.getElementById('message-input').value = '';
+                document.getElementById('ai-suggestions-box').innerHTML = ''; // clear suggestions
+            }
+        } catch (err) { console.error(err); }
+    }
+
+    async function sendMedia() {
+        if (!currentGroupId) return alert("Select a group first");
+        const fileInput = document.getElementById('media-input');
+        if (!fileInput.files[0]) return;
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('groupId', currentGroupId);
+
+        try {
+            // Show temporary loading message
+            const btn = document.querySelector('.file-btn');
+            const oldText = btn.innerText;
+            btn.innerText = "⏳";
+            
+            const res = await fetch(`${API_URL}/message/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': token },
+                body: formData 
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                socket.emit('send-message', data.data);
+            } else {
+                alert("Upload failed");
+            }
+            btn.innerText = "📎";
+            fileInput.value = '';
+        } catch (err) { console.error(err); }
+    }
+
+    async function addUserToGroup() {
+        if (!currentGroupId) return alert("Select a group first");
+        const email = document.getElementById('add-user-email').value;
+        try {
+            const res = await fetch(`${API_URL}/group/add-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ email, groupId: currentGroupId })
+            });
+            const data = await res.json();
+            alert(data.message);
+            document.getElementById('add-user-email').value = '';
+        } catch (err) { console.error(err); }
+    }
+
+    function appendMessageToUI(msg) {
+        const chatBox = document.getElementById('chat-box');
+        
+        const isMine = msg.userId == currentUserId;
+        const isOnline = currentlyOnlineUsers.includes(String(msg.userId));
+        const statusClass = isOnline ? 'status-online' : 'status-offline';
+
+        const row = document.createElement('div');
+        row.className = `message-row ${isMine ? 'mine' : 'others'}`;
+        
+        let html = '';
+        if (!isMine) {
+            html += `<div class="sender-name">
+                        <span class="status-dot ${statusClass}"></span> ${msg.userName}
+                     </div>`;
+        }
+
+        html += `<div class="message-bubble">`;
+        if (msg.text) html += `<span class="msg-text">${msg.text}</span>`;
+        if (msg.mediaUrl) html += `<img src="${msg.mediaUrl}" class="chat-img" alt="image">`;
+        html += `</div>`;
+
+        row.innerHTML = html;
+        chatBox.appendChild(row);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function getAiSuggestions() {
+        if (!currentGroupId) return alert("Select a group first");
+        
+        const messageElements = document.querySelectorAll('.msg-text');
+        if (messageElements.length === 0) return alert("No messages yet!");
+
+        const lastMessages = Array.from(messageElements).slice(-5).map(el => el.innerText).join(" | ");
+        const box = document.getElementById('ai-suggestions-box');
+        box.innerHTML = "<span style='font-size:12px; color:#6B7280;'>✨ Thinking...</span>";
+        
+        try {
+            const res = await fetch(`${API_URL}/ai/suggest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                body: JSON.stringify({ context: lastMessages })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                box.innerHTML = ''; 
+                data.suggestions.forEach(suggestion => {
+                    const btn = document.createElement('button');
+                    btn.className = 'ai-btn';
+                    btn.innerText = suggestion;
+                    btn.onclick = () => {
+                        document.getElementById('message-input').value = suggestion;
+                        box.innerHTML = ''; 
+                    };
+                    box.appendChild(btn);
+                });
+            } else {
+                box.innerHTML = "";
+            }
+        } catch (err) { box.innerHTML = ""; }
+    }
+</script>
+</body>
+</html>
